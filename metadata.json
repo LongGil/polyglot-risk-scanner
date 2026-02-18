@@ -1,0 +1,5 @@
+{
+  "name": "Polyglot Risk Scanner",
+  "description": "A game localization tool for parsing custom TXT files, simulating translations, and scanning for UI/code risks.",
+  "requestFramePermissions": []
+}
