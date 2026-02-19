@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { ProcessedEntry, RiskWarning } from '../types';
-import { AlertTriangle, AlertOctagon, Maximize2, CheckCircle2, Search, Filter, X } from 'lucide-react';
+import { AlertTriangle, AlertOctagon, Maximize2, CheckCircle2, Search, Filter, X, ShieldAlert, FileWarning } from 'lucide-react';
 
 interface ResultsTableProps {
   entries: ProcessedEntry[];
@@ -14,6 +14,10 @@ const RiskIcon: React.FC<{ type: RiskWarning['type'] }> = ({ type }) => {
       return <AlertTriangle className="w-4 h-4 text-yellow-500" />;
     case 'UI_EXPANSION_RISK':
       return <Maximize2 className="w-4 h-4 text-red-500" />;
+    case 'CULTURAL_ERROR':
+      return <ShieldAlert className="w-4 h-4 text-red-600" />;
+    case 'FORMATTING_ERROR':
+      return <FileWarning className="w-4 h-4 text-yellow-600" />;
     default:
       return <AlertTriangle className="w-4 h-4 text-slate-500" />;
   }
@@ -27,7 +31,7 @@ const ResultsTable: React.FC<ResultsTableProps> = ({ entries }) => {
     return entries.filter(entry => {
       // 1. Search Filter
       const searchLower = searchTerm.toLowerCase();
-      const matchesSearch = 
+      const matchesSearch =
         entry.stringKey.toLowerCase().includes(searchLower) ||
         entry.originalValue.toLowerCase().includes(searchLower) ||
         entry.translatedValue.toLowerCase().includes(searchLower) ||
@@ -40,7 +44,7 @@ const ResultsTable: React.FC<ResultsTableProps> = ({ entries }) => {
       if (filterRisk === 'all') return true;
       if (filterRisk === 'passed') return entry.risks.length === 0;
       if (filterRisk === 'risks_only') return entry.risks.length > 0;
-      
+
       // Specific risk type
       return entry.risks.some(r => r.type === filterRisk);
     });
@@ -80,10 +84,10 @@ const ResultsTable: React.FC<ResultsTableProps> = ({ entries }) => {
             </button>
           )}
         </div>
-        
+
         {/* Filter Dropdown */}
         <div className="relative w-full sm:w-64">
-           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
             <Filter className="h-4 w-4 text-slate-500" />
           </div>
           <select
@@ -98,9 +102,11 @@ const ResultsTable: React.FC<ResultsTableProps> = ({ entries }) => {
             <option value="RTL_ALERT">RTL Issues</option>
             <option value="CJK_FONT_ALERT">CJK Font Issues</option>
             <option value="UI_EXPANSION_RISK">UI Expansion Issues</option>
+            <option value="CULTURAL_ERROR">Cultural/Sensitivity Issues</option>
+            <option value="FORMATTING_ERROR">Formatting Issues</option>
           </select>
-           <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-400">
-            <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-400">
+            <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" /></svg>
           </div>
         </div>
       </div>
@@ -132,7 +138,7 @@ const ResultsTable: React.FC<ResultsTableProps> = ({ entries }) => {
                         {entry.stringKey}
                       </div>
                       {entry.tableId && (
-                         <div className="text-xs text-slate-600 mt-1">{entry.tableId}</div>
+                        <div className="text-xs text-slate-600 mt-1">{entry.tableId}</div>
                       )}
                     </td>
                     <td className="px-6 py-4 align-top text-slate-300 max-w-xs break-words">
@@ -150,13 +156,14 @@ const ResultsTable: React.FC<ResultsTableProps> = ({ entries }) => {
                       ) : (
                         <div className="flex flex-col gap-2">
                           {entry.risks.map((risk, idx) => (
-                            <div 
-                              key={idx} 
-                              className={`flex items-start gap-2 text-xs p-2 rounded border ${
-                                risk.type === 'UI_EXPANSION_RISK' ? 'bg-red-950/30 border-red-900/50 text-red-200' :
-                                risk.type === 'RTL_ALERT' ? 'bg-orange-950/30 border-orange-900/50 text-orange-200' :
-                                'bg-yellow-950/30 border-yellow-900/50 text-yellow-200'
-                              }`}
+                            <div
+                              key={idx}
+                              className={`flex items-start gap-2 text-xs p-2 rounded border ${risk.type === 'UI_EXPANSION_RISK' ? 'bg-red-950/30 border-red-900/50 text-red-200' :
+                                  risk.type === 'CULTURAL_ERROR' ? 'bg-red-950/40 border-red-800/60 text-red-100' :
+                                    risk.type === 'FORMATTING_ERROR' ? 'bg-yellow-950/40 border-yellow-800/60 text-yellow-100' :
+                                      risk.type === 'RTL_ALERT' ? 'bg-orange-950/30 border-orange-900/50 text-orange-200' :
+                                        'bg-yellow-950/30 border-yellow-900/50 text-yellow-200'
+                                }`}
                             >
                               <RiskIcon type={risk.type} />
                               <span>{risk.message}</span>
@@ -171,14 +178,14 @@ const ResultsTable: React.FC<ResultsTableProps> = ({ entries }) => {
                 <tr>
                   <td colSpan={5} className="px-6 py-12 text-center text-slate-500">
                     <div className="flex flex-col items-center gap-2">
-                       <Search className="w-8 h-8 opacity-20" />
-                       <p>No results match your search filters.</p>
-                       <button 
-                         onClick={() => { setSearchTerm(''); setFilterRisk('all'); }}
-                         className="text-accent-500 hover:text-accent-400 text-xs mt-2 font-medium"
-                       >
-                         Clear filters
-                       </button>
+                      <Search className="w-8 h-8 opacity-20" />
+                      <p>No results match your search filters.</p>
+                      <button
+                        onClick={() => { setSearchTerm(''); setFilterRisk('all'); }}
+                        className="text-accent-500 hover:text-accent-400 text-xs mt-2 font-medium"
+                      >
+                        Clear filters
+                      </button>
                     </div>
                   </td>
                 </tr>

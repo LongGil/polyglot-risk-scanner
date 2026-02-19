@@ -20,8 +20,8 @@ const App: React.FC = () => {
   const [fileName, setFileName] = useState<string | null>(null);
 
   const [targetLang, setTargetLang] = useState<string>('de-DE');
-  const [selectionMode, setSelectionMode] = useState<'single' | 'all' | 'custom'>('single');
-  const [selectedLangs, setSelectedLangs] = useState<Set<string>>(new Set());
+  const [selectionMode, setSelectionMode] = useState<'single' | 'all' | 'custom'>('custom');
+  const [selectedLangs, setSelectedLangs] = useState<Set<string>>(new Set(['en-US']));
   const [isLangPanelOpen, setIsLangPanelOpen] = useState(false);
   const langPanelRef = useRef<HTMLDivElement>(null);
 
@@ -56,9 +56,10 @@ const App: React.FC = () => {
   };
 
   const isMultiLang = selectionMode === 'all' || (selectionMode === 'custom' && selectedLangs.size > 1);
-  const [provider, setProvider] = useState<string>('mock');
+  const [provider, setProvider] = useState<string>('lmstudio');
   const [lmStudioUrl, setLmStudioUrl] = useState<string>('http://localhost:1234/v1');
   const [context, setContext] = useState<string>('');
+  const [batchSize, setBatchSize] = useState<number>(50);
   const [isProcessing, setIsProcessing] = useState(false);
   const [results, setResults] = useState<ProcessedEntry[]>([]);
   const [originalMetadata, setOriginalMetadata] = useState<ParseResult['metadata'] | null>(null);
@@ -85,27 +86,43 @@ const App: React.FC = () => {
 
       // Prepare batch data (extract all original values once)
       const textsToTranslate = entries.map(entry => entry.originalValue);
+      console.log(`[Frontend] Sending ${textsToTranslate.length} texts to translate. First 5:`, textsToTranslate.slice(0, 5));
 
-      // 2. Translate & Scan (Batch mode)
+      // 2. Translate & Scan (Batch mode with Chunking)
       for (const lang of languagesToProcess) {
         try {
-          // Send one batch request per language
-          const translatedTexts = await translateBatch(
-            textsToTranslate,
-            lang.code,
-            provider,
-            provider === 'lmstudio' ? lmStudioUrl : undefined,
-            context
-          );
+          const allTranslatedForLang: string[] = [];
+
+          // Determine chunk size (0 means all)
+          const chunkSize = batchSize === 0 ? textsToTranslate.length : batchSize;
+
+          for (let i = 0; i < textsToTranslate.length; i += chunkSize) {
+            const chunk = textsToTranslate.slice(i, i + chunkSize);
+            console.log(`[Frontend] Processing chunk ${Math.ceil(i / chunkSize) + 1} (${chunk.length} items) for ${lang.code}`);
+
+            const chunkTranslated = await translateBatch(
+              chunk,
+              lang.code,
+              provider,
+              provider === 'lmstudio' ? lmStudioUrl : undefined,
+              context
+            );
+
+            allTranslatedForLang.push(...chunkTranslated);
+          }
 
           // Map results back to entries
           const langResults = entries.map((entry, index) => {
-            const translated = translatedTexts[index];
-            const risks = scanForRisks(entry.originalValue, translated, lang.code);
+            const translated = allTranslatedForLang[index];
+            if (translated === undefined) {
+              console.warn(`[Warning] No translation returned for index ${index}: "${entry.originalValue}"`);
+            }
+            const safeTranslated = translated ?? '';
+            const risks = scanForRisks(entry.originalValue, safeTranslated, lang.code);
             return {
               ...entry,
               id: `${entry.id}-${lang.code}`, // Unique ID for React Key
-              translatedValue: translated,
+              translatedValue: safeTranslated,
               risks,
               languageCode: lang.code
             };
@@ -206,160 +223,100 @@ const App: React.FC = () => {
                 <div>
                   <label className="block text-sm font-medium text-slate-400 mb-1.5">Target Language</label>
 
-                  {/* Mode selector tabs */}
-                  <div className="flex gap-1 mb-3 bg-slate-800 rounded-lg p-1">
-                    <button
-                      type="button"
-                      onClick={() => setSelectionMode('single')}
-                      className={`flex-1 text-xs py-1.5 px-2 rounded-md transition-all font-medium ${selectionMode === 'single'
-                        ? 'bg-accent-500 text-white shadow-sm'
-                        : 'text-slate-400 hover:text-white'
-                        }`}
+                  {/* Single language dropdown - REMOVED */}
+
+                  {/* Custom checkbox list - ALWAYS VISIBLE */}
+                  <div ref={langPanelRef}>
+                    {/* Summary bar */}
+                    <div
+                      className="w-full bg-slate-800 border border-slate-700 text-white text-sm rounded-lg p-2.5 cursor-pointer flex items-center justify-between hover:border-slate-600 transition-colors"
+                      onClick={() => setIsLangPanelOpen(!isLangPanelOpen)}
                     >
-                      Single
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setSelectionMode('custom')}
-                      className={`flex-1 text-xs py-1.5 px-2 rounded-md transition-all font-medium ${selectionMode === 'custom'
-                        ? 'bg-accent-500 text-white shadow-sm'
-                        : 'text-slate-400 hover:text-white'
-                        }`}
-                    >
-                      Custom
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setSelectionMode('all')}
-                      className={`flex-1 text-xs py-1.5 px-2 rounded-md transition-all font-medium ${selectionMode === 'all'
-                        ? 'bg-accent-500 text-white shadow-sm'
-                        : 'text-slate-400 hover:text-white'
-                        }`}
-                    >
-                      All
-                    </button>
+                      <span className={selectedLangs.size === 0 ? 'text-slate-500' : ''}>
+                        {selectedLangs.size === 0
+                          ? 'Select languages...'
+                          : `${selectedLangs.size} language${selectedLangs.size > 1 ? 's' : ''} selected`}
+                      </span>
+                      <svg className={`fill-current h-4 w-4 text-slate-400 transition-transform ${isLangPanelOpen ? 'rotate-180' : ''}`} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" /></svg>
+                    </div>
+
+                    {/* Dropdown checkbox panel */}
+                    {isLangPanelOpen && (
+                      <div className="mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-xl overflow-hidden z-50">
+                        {/* Select/Deselect all */}
+                        <div className="flex items-center justify-between px-3 py-2 bg-slate-750 border-b border-slate-700">
+                          <span className="text-xs text-slate-400 font-medium">Quick Actions</span>
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              onClick={selectAllLangs}
+                              className="text-xs text-accent-400 hover:text-accent-300 transition-colors font-medium"
+                            >
+                              Select All
+                            </button>
+                            <span className="text-slate-600">|</span>
+                            <button
+                              type="button"
+                              onClick={deselectAllLangs}
+                              className="text-xs text-slate-500 hover:text-slate-300 transition-colors font-medium"
+                            >
+                              Clear
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Language list */}
+                        <div className="max-h-60 overflow-y-auto custom-scrollbar">
+                          {TARGET_LANGUAGES.map((lang) => (
+                            <label
+                              key={lang.code}
+                              className="flex items-center gap-3 px-3 py-2 hover:bg-slate-700/50 cursor-pointer transition-colors group"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={selectedLangs.has(lang.code)}
+                                onChange={() => toggleLang(lang.code)}
+                                className="w-4 h-4 rounded border-slate-600 bg-slate-700 text-accent-500 focus:ring-accent-500 focus:ring-offset-0 cursor-pointer"
+                              />
+                              <span className="text-sm text-slate-300 group-hover:text-white transition-colors">
+                                {lang.label}
+                                <span className="text-slate-500 ml-1">[{lang.code}]</span>
+                              </span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Selected tags */}
+                    {selectedLangs.size > 0 && !isLangPanelOpen && (
+                      <div className="flex flex-wrap gap-1.5 mt-2">
+                        {Array.from(selectedLangs).map(code => {
+                          const lang = TARGET_LANGUAGES.find(l => l.code === code);
+                          return (
+                            <span
+                              key={code}
+                              className="inline-flex items-center gap-1 bg-accent-500/15 text-accent-400 text-xs px-2 py-0.5 rounded-md border border-accent-500/25"
+                            >
+                              {lang?.label || code}
+                              <button
+                                type="button"
+                                onClick={() => toggleLang(code as string)}
+                                className="hover:text-white transition-colors ml-0.5"
+                              >
+                                ×
+                              </button>
+                            </span>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
 
-                  {/* Single language dropdown */}
-                  {selectionMode === 'single' && (
-                    <div className="relative">
-                      <select
-                        value={targetLang}
-                        onChange={(e) => setTargetLang(e.target.value)}
-                        className="w-full bg-slate-800 border border-slate-700 text-white text-sm rounded-lg focus:ring-accent-500 focus:border-accent-500 block p-2.5 appearance-none"
-                      >
-                        {TARGET_LANGUAGES.map((lang) => (
-                          <option key={lang.code} value={lang.code}>
-                            {lang.label} [{lang.code}]
-                          </option>
-                        ))}
-                      </select>
-                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-400">
-                        <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" /></svg>
-                      </div>
-                    </div>
-                  )}
 
-                  {/* Custom checkbox list */}
-                  {selectionMode === 'custom' && (
-                    <div ref={langPanelRef}>
-                      {/* Summary bar */}
-                      <div
-                        className="w-full bg-slate-800 border border-slate-700 text-white text-sm rounded-lg p-2.5 cursor-pointer flex items-center justify-between hover:border-slate-600 transition-colors"
-                        onClick={() => setIsLangPanelOpen(!isLangPanelOpen)}
-                      >
-                        <span className={selectedLangs.size === 0 ? 'text-slate-500' : ''}>
-                          {selectedLangs.size === 0
-                            ? 'Select languages...'
-                            : `${selectedLangs.size} language${selectedLangs.size > 1 ? 's' : ''} selected`}
-                        </span>
-                        <svg className={`fill-current h-4 w-4 text-slate-400 transition-transform ${isLangPanelOpen ? 'rotate-180' : ''}`} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" /></svg>
-                      </div>
+                  {/* All languages info - REMOVED */}
 
-                      {/* Dropdown checkbox panel */}
-                      {isLangPanelOpen && (
-                        <div className="mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-xl overflow-hidden z-50">
-                          {/* Select/Deselect all */}
-                          <div className="flex items-center justify-between px-3 py-2 bg-slate-750 border-b border-slate-700">
-                            <span className="text-xs text-slate-400 font-medium">Quick Actions</span>
-                            <div className="flex gap-2">
-                              <button
-                                type="button"
-                                onClick={selectAllLangs}
-                                className="text-xs text-accent-400 hover:text-accent-300 transition-colors font-medium"
-                              >
-                                Select All
-                              </button>
-                              <span className="text-slate-600">|</span>
-                              <button
-                                type="button"
-                                onClick={deselectAllLangs}
-                                className="text-xs text-slate-500 hover:text-slate-300 transition-colors font-medium"
-                              >
-                                Clear
-                              </button>
-                            </div>
-                          </div>
-
-                          {/* Language list */}
-                          <div className="max-h-60 overflow-y-auto custom-scrollbar">
-                            {TARGET_LANGUAGES.map((lang) => (
-                              <label
-                                key={lang.code}
-                                className="flex items-center gap-3 px-3 py-2 hover:bg-slate-700/50 cursor-pointer transition-colors group"
-                              >
-                                <input
-                                  type="checkbox"
-                                  checked={selectedLangs.has(lang.code)}
-                                  onChange={() => toggleLang(lang.code)}
-                                  className="w-4 h-4 rounded border-slate-600 bg-slate-700 text-accent-500 focus:ring-accent-500 focus:ring-offset-0 cursor-pointer"
-                                />
-                                <span className="text-sm text-slate-300 group-hover:text-white transition-colors">
-                                  {lang.label}
-                                  <span className="text-slate-500 ml-1">[{lang.code}]</span>
-                                </span>
-                              </label>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Selected tags */}
-                      {selectedLangs.size > 0 && !isLangPanelOpen && (
-                        <div className="flex flex-wrap gap-1.5 mt-2">
-                          {Array.from(selectedLangs).map(code => {
-                            const lang = TARGET_LANGUAGES.find(l => l.code === code);
-                            return (
-                              <span
-                                key={code}
-                                className="inline-flex items-center gap-1 bg-accent-500/15 text-accent-400 text-xs px-2 py-0.5 rounded-md border border-accent-500/25"
-                              >
-                                {lang?.label || code}
-                                <button
-                                  type="button"
-                                  onClick={() => toggleLang(code as string)}
-                                  className="hover:text-white transition-colors ml-0.5"
-                                >
-                                  ×
-                                </button>
-                              </span>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* All languages info */}
-                  {selectionMode === 'all' && (
-                    <div className="bg-accent-500/10 border border-accent-500/20 rounded-lg p-3">
-                      <p className="text-sm text-accent-400">
-                        ⚡ Batch mode: Translates to all <strong>{TARGET_LANGUAGES.length}</strong> supported languages.
-                      </p>
-                    </div>
-                  )}
-
-                  {selectionMode === 'custom' && selectedLangs.size > 0 && (
+                  {selectedLangs.size > 0 && (
                     <p className="text-xs text-accent-400 mt-2">
                       * Will translate to {selectedLangs.size} selected language{selectedLangs.size > 1 ? 's' : ''}.
                     </p>
@@ -401,6 +358,31 @@ const App: React.FC = () => {
                     </p>
                   </div>
                 )}
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-400 mb-1.5">Batch Size</label>
+                  <div className="flex gap-1 mb-1 bg-slate-800 rounded-lg p-1">
+                    {[1, 10, 50, 0].map((size) => (
+                      <button
+                        key={size}
+                        type="button"
+                        onClick={() => setBatchSize(size)}
+                        className={`flex-1 text-xs py-1.5 px-2 rounded-md transition-all font-medium ${batchSize === size
+                          ? 'bg-accent-500 text-white shadow-sm'
+                          : 'text-slate-400 hover:text-white'
+                          }`}
+                      >
+                        {size === 0 ? 'All' : size}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-xs text-slate-500">
+                    {batchSize === 1 && '🐌 Slowest, most reliable (Sequential).'}
+                    {batchSize === 10 && '⚖️ Balanced reliability & speed.'}
+                    {batchSize === 50 && '⚡ Standard batch speed.'}
+                    {batchSize === 0 && '🚀 Fastest. Warning: May hit token limits.'}
+                  </p>
+                </div>
 
                 <div className="mt-4 border-t border-slate-800 pt-4">
                   <label className="block text-sm font-medium text-slate-400 mb-1.5">

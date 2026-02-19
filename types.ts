@@ -12,7 +12,7 @@ export interface ProcessedEntry extends LocalizationEntry {
 }
 
 export interface RiskWarning {
-  type: 'RTL_ALERT' | 'CJK_FONT_ALERT' | 'UI_EXPANSION_RISK' | 'INFO';
+  type: 'RTL_ALERT' | 'CJK_FONT_ALERT' | 'UI_EXPANSION_RISK' | 'CULTURAL_ERROR' | 'FORMATTING_ERROR' | 'INFO';
   message: string;
 }
 
