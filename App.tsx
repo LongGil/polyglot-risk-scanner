@@ -58,6 +58,7 @@ const App: React.FC = () => {
   const isMultiLang = selectionMode === 'all' || (selectionMode === 'custom' && selectedLangs.size > 1);
   const [provider, setProvider] = useState<string>('mock');
   const [lmStudioUrl, setLmStudioUrl] = useState<string>('http://localhost:1234/v1');
+  const [context, setContext] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [results, setResults] = useState<ProcessedEntry[]>([]);
   const [originalMetadata, setOriginalMetadata] = useState<ParseResult['metadata'] | null>(null);
@@ -93,7 +94,8 @@ const App: React.FC = () => {
             textsToTranslate,
             lang.code,
             provider,
-            provider === 'lmstudio' ? lmStudioUrl : undefined
+            provider === 'lmstudio' ? lmStudioUrl : undefined,
+            context
           );
 
           // Map results back to entries
@@ -399,6 +401,21 @@ const App: React.FC = () => {
                     </p>
                   </div>
                 )}
+
+                <div className="mt-4 border-t border-slate-800 pt-4">
+                  <label className="block text-sm font-medium text-slate-400 mb-1.5">
+                    Translation Context <span className="text-slate-600 font-normal">(Optional)</span>
+                  </label>
+                  <textarea
+                    value={context}
+                    onChange={(e) => setContext(e.target.value)}
+                    placeholder="e.g. 'This text is for a button in a game menu' or 'Marketing slogan for a racing game'"
+                    className="w-full bg-slate-800 border border-slate-700 text-white text-sm rounded-lg focus:ring-accent-500 focus:border-accent-500 block p-2.5 h-20 resize-none"
+                  />
+                  <p className="text-xs text-slate-500 mt-1">
+                    Provide context to guide the AI translator (supported by OpenAI & LM Studio).
+                  </p>
+                </div>
               </div>
             </div>
 

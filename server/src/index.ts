@@ -33,7 +33,7 @@ app.get('/health', (req, res) => {
 // Translate Endpoint
 app.post('/api/translate', async (req: Request, res: Response) => {
     try {
-        const { texts, targetLang, provider, customUrl } = req.body;
+        const { texts, targetLang, provider, customUrl, context } = req.body;
 
         if (!texts || !Array.isArray(texts)) {
             return res.status(400).json({ error: 'Invalid input: "texts" must be an array of strings.' });
@@ -45,10 +45,10 @@ app.post('/api/translate', async (req: Request, res: Response) => {
 
         const selectedProvider = (provider as SupportedProvider) || 'mock';
 
-        console.log(`Received translation request: ${texts.length} items to ${targetLang} via ${selectedProvider}`);
+        console.log(`Received translation request: ${texts.length} items to ${targetLang} via ${selectedProvider} ${context ? '(with context)' : ''}`);
 
         const translator = translationService.getProvider(selectedProvider, { customUrl });
-        const translated = await translator.translate(texts, targetLang);
+        const translated = await translator.translate(texts, targetLang, context);
 
         res.json({ translations: translated });
 

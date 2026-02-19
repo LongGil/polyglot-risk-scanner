@@ -12,15 +12,19 @@ export class LMStudioProvider implements TranslationProvider {
         });
     }
 
-    async translate(texts: string[], targetLang: string): Promise<string[]> {
+    async translate(texts: string[], targetLang: string, context?: string): Promise<string[]> {
         if (!texts.length) return [];
 
         // LM Studio models might vary in their ability to handle JSON mode.
         // We will try a structured prompt first.
-        const prompt = `You are a professional translator. Translate the following array of texts into ${targetLang}. 
-    Return ONLY a raw JSON array of strings. Do not include markdown formatting or keys like "translations".
-    
-    Source Texts:
+        let prompt = `You are a professional translator. Translate the following array of texts into ${targetLang}. 
+    Return ONLY a raw JSON array of strings. Do not include markdown formatting or keys like "translations".`;
+
+        if (context && context.trim()) {
+            prompt += `\n\nContext for translation: ${context}`;
+        }
+
+        prompt += `\n\nSource Texts:
     ${JSON.stringify(texts)}`;
 
         try {

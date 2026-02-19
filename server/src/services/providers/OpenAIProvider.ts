@@ -9,10 +9,13 @@ export class OpenAIProvider implements TranslationProvider {
         this.client = new OpenAI({ apiKey });
     }
 
-    async translate(texts: string[], targetLang: string): Promise<string[]> {
+    async translate(texts: string[], targetLang: string, context?: string): Promise<string[]> {
         if (!texts.length) return [];
 
-        const prompt = `Translate the following texts to ${targetLang}. Return a JSON array of strings. Maintain the original order.`;
+        let prompt = `Translate the following texts to ${targetLang}. Return a JSON array of strings. Maintain the original order.`;
+        if (context && context.trim()) {
+            prompt += `\n\nContext: ${context}`;
+        }
 
         try {
             const response = await this.client.chat.completions.create({

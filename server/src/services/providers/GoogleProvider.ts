@@ -5,7 +5,7 @@ export class GoogleProvider implements TranslationProvider {
 
     constructor(apiKey: string) { }
 
-    async translate(texts: string[], targetLang: string): Promise<string[]> {
+    async translate(texts: string[], targetLang: string, context?: string): Promise<string[]> {
         // TODO: Implement Google Translate API
         throw new Error("Google Provider not yet implemented");
     }
