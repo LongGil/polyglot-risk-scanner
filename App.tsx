@@ -11,6 +11,7 @@ import { scanForRisks, generateCsvReport } from './services/scanner';
 import { Play, Download, RefreshCw, FileDown } from 'lucide-react';
 // @ts-ignore
 import JSZip from 'jszip';
+import DebugConsole from './components/DebugConsole';
 
 const App: React.FC = () => {
   // State
@@ -480,6 +481,8 @@ const App: React.FC = () => {
 
         </div>
       </main>
+
+      <DebugConsole />
     </div>
   );
 };

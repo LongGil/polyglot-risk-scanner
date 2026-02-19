@@ -1,5 +1,5 @@
 import React from 'react';
-import { Globe2 } from 'lucide-react';
+import { Globe2, Github } from 'lucide-react';
 
 const Header: React.FC = () => {
   return (
@@ -15,10 +15,16 @@ const Header: React.FC = () => {
           </div>
         </div>
         <div className="flex items-center gap-4">
-           {/* Placeholder for user profile or extra settings if needed */}
-           <div className="text-xs text-slate-500 bg-slate-800 px-3 py-1 rounded-full border border-slate-700">
-             Internal Build
-           </div>
+          {/* Placeholder for user profile or extra settings if needed */}
+          <a
+            href="https://github.com/LongGil/polyglot-risk-scanner"
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-center gap-2 text-xs text-slate-400 bg-slate-800 hover:bg-slate-700 hover:text-white transition-colors px-3 py-1.5 rounded-full border border-slate-700"
+          >
+            <Github className="w-3.5 h-3.5" />
+            <span>View on GitHub</span>
+          </a>
         </div>
       </div>
     </header>

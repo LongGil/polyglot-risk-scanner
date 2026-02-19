@@ -36,9 +36,10 @@ export class OpenAIProvider implements TranslationProvider {
             // Fallback: expect a key called "results" or similar, or just try Object.values
             return Object.values(parsed).flat() as string[];
 
-        } catch (error) {
+        } catch (error: any) {
             console.error("OpenAI Translation Error:", error);
-            throw new Error("Failed to translate with OpenAI");
+            const errorMessage = error.message || "Unknown OpenAI error";
+            throw new Error(`OpenAI Error: ${errorMessage}`);
         }
     }
 }
