@@ -17,10 +17,11 @@ async function translateMock(texts: string[], targetLang: string): Promise<strin
 async function translateOpenAI(
     texts: string[],
     targetLang: string,
-    context?: string
+    context?: string,
+    userApiKey?: string
 ): Promise<string[]> {
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) throw new Error("Provider 'openai' is not configured (Missing OPENAI_API_KEY).");
+    const apiKey = userApiKey?.trim() || process.env.OPENAI_API_KEY;
+    if (!apiKey) throw new Error("Provider 'openai' requires an API Key. Please enter your OpenAI API Key in the Configuration panel.");
 
     const client = new OpenAI({ apiKey });
 
@@ -68,10 +69,9 @@ async function translateLMStudio(
     const isLocalUrl = baseURL.includes('localhost') || baseURL.includes('127.0.0.1');
     if (isVercel && isLocalUrl) {
         throw new Error(
-            'LM Studio URL is set to localhost, which cannot be reached from Vercel servers. ' +
+            'LM Studio URL is set to localhost, which cannot be reached from servers. ' +
             'Please provide a publicly accessible URL in the "Custom LM Studio URL" field ' +
-            '(e.g. via ngrok: https://xxxx.ngrok-free.app/v1), ' +
-            'or set LM_STUDIO_URL in your Vercel environment variables.'
+            '(e.g. via ngrok: https://xxxx.ngrok-free.app/v1), '
         );
     }
 
@@ -161,7 +161,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     try {
-        const { texts, targetLang, provider, customUrl, context } = req.body;
+        const { texts, targetLang, provider, customUrl, context, apiKey: userApiKey } = req.body;
 
         if (!texts || !Array.isArray(texts)) {
             return res.status(400).json({ error: 'Invalid input: "texts" must be an array of strings.' });
@@ -181,7 +181,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 translated = await translateMock(texts, targetLang);
                 break;
             case 'openai':
-                translated = await translateOpenAI(texts, targetLang, context);
+                translated = await translateOpenAI(texts, targetLang, context, userApiKey);
                 break;
             case 'lmstudio':
                 translated = await translateLMStudio(texts, targetLang, customUrl, context);
