@@ -1,17 +1,117 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { TranslationService } from '../server/src/services/translation';
+import OpenAI from 'openai';
 
-let translationService: TranslationService | null = null;
+// ─── Types ────────────────────────────────────────────────────────────────────
 
-function getTranslationService(): TranslationService {
-    if (!translationService) {
-        translationService = new TranslationService();
-    }
-    return translationService;
+type SupportedProvider = 'openai' | 'google' | 'deepl' | 'mock' | 'lmstudio';
+
+// ─── Mock Provider ────────────────────────────────────────────────────────────
+
+async function translateMock(texts: string[], targetLang: string): Promise<string[]> {
+    await new Promise(resolve => setTimeout(resolve, 300));
+    return texts.map(text => `[MOCK-${targetLang}] ${text}`);
 }
 
+// ─── OpenAI Provider ─────────────────────────────────────────────────────────
+
+async function translateOpenAI(
+    texts: string[],
+    targetLang: string,
+    context?: string
+): Promise<string[]> {
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) throw new Error("Provider 'openai' is not configured (Missing OPENAI_API_KEY).");
+
+    const client = new OpenAI({ apiKey });
+
+    let prompt = `Translate the following texts to ${targetLang}. Return a JSON array of strings. Maintain the original order.`;
+    if (context?.trim()) {
+        prompt += `\n\nContext: ${context}`;
+    }
+
+    const response = await client.chat.completions.create({
+        model: 'gpt-3.5-turbo',
+        messages: [
+            { role: 'system', content: 'You are a helpful translator. You must return valid JSON.' },
+            { role: 'user', content: `${prompt}\n\n${JSON.stringify(texts)}` },
+        ],
+        response_format: { type: 'json_object' },
+    });
+
+    const content = response.choices[0].message.content;
+    if (!content) throw new Error('No content received from OpenAI');
+
+    const parsed = JSON.parse(content);
+    if (Array.isArray(parsed)) return parsed;
+    if (parsed.translations && Array.isArray(parsed.translations)) return parsed.translations;
+    return Object.values(parsed).flat() as string[];
+}
+
+// ─── LM Studio Provider ───────────────────────────────────────────────────────
+
+async function translateLMStudio(
+    texts: string[],
+    targetLang: string,
+    customUrl?: string,
+    context?: string
+): Promise<string[]> {
+    const baseURL = customUrl || process.env.LM_STUDIO_URL || 'http://localhost:1234/v1';
+
+    const client = new OpenAI({ baseURL, apiKey: 'lm-studio' });
+
+    let prompt = `You are a professional translator. Translate the following array of texts into ${targetLang}. 
+Return ONLY a raw JSON array of strings. 
+IMPORTANT: The output array MUST have exactly the same number of items as the input array.
+Translate every single item, even if it looks like a symbol or code. Do not skip any items.
+Do not include markdown formatting or keys like "translations".`;
+
+    if (context?.trim()) {
+        prompt += `\n\nContext for translation: ${context}`;
+    }
+
+    prompt += `\n\nSource Texts (${texts.length} items):\n${JSON.stringify(texts)}`;
+
+    const response = await client.chat.completions.create({
+        model: 'local-model',
+        messages: [
+            { role: 'system', content: 'You are a helpful translator. RESTRICTION: output strictly valid JSON array. Length MUST match input.' },
+            { role: 'user', content: prompt },
+        ],
+        temperature: 0.1,
+    });
+
+    const content = response.choices[0].message.content;
+    if (!content) throw new Error('No content received from LM Studio');
+
+    const cleanContent = content.replace(/```json/g, '').replace(/```/g, '').trim();
+
+    let parsed;
+    try {
+        parsed = JSON.parse(cleanContent);
+    } catch {
+        throw new Error('Model failed to return valid JSON array.');
+    }
+
+    if (Array.isArray(parsed)) return parsed as string[];
+    if (parsed.translations && Array.isArray(parsed.translations)) return parsed.translations;
+    return Object.values(parsed).flat() as string[];
+}
+
+// ─── Google Provider ──────────────────────────────────────────────────────────
+
+async function translateGoogle(texts: string[], targetLang: string): Promise<string[]> {
+    throw new Error("Provider 'google' is not yet implemented.");
+}
+
+// ─── DeepL Provider ───────────────────────────────────────────────────────────
+
+async function translateDeepL(texts: string[], targetLang: string): Promise<string[]> {
+    throw new Error("Provider 'deepl' is not yet implemented.");
+}
+
+// ─── Handler ──────────────────────────────────────────────────────────────────
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-    // Only allow POST
     if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Method not allowed' });
     }
@@ -27,13 +127,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             return res.status(400).json({ error: 'Invalid input: "targetLang" is required.' });
         }
 
-        const selectedProvider = provider || 'mock';
-
+        const selectedProvider: SupportedProvider = provider || 'mock';
         console.log(`[API] Translation request: ${texts.length} items to ${targetLang} via ${selectedProvider}`);
 
-        const service = getTranslationService();
-        const translator = service.getProvider(selectedProvider, { customUrl });
-        const translated = await translator.translate(texts, targetLang, context);
+        let translated: string[];
+
+        switch (selectedProvider) {
+            case 'mock':
+                translated = await translateMock(texts, targetLang);
+                break;
+            case 'openai':
+                translated = await translateOpenAI(texts, targetLang, context);
+                break;
+            case 'lmstudio':
+                translated = await translateLMStudio(texts, targetLang, customUrl, context);
+                break;
+            case 'google':
+                translated = await translateGoogle(texts, targetLang);
+                break;
+            case 'deepl':
+                translated = await translateDeepL(texts, targetLang);
+                break;
+            default:
+                return res.status(400).json({ error: `Unknown provider: ${selectedProvider}` });
+        }
 
         return res.status(200).json({ translations: translated });
 
@@ -41,7 +158,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         console.error('[API] Translation error:', error.message);
         return res.status(500).json({
             error: 'Translation failed',
-            details: error.message
+            details: error.message,
         });
     }
 }
