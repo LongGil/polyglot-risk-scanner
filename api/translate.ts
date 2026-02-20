@@ -48,6 +48,11 @@ async function translateOpenAI(
 }
 
 // ─── LM Studio Provider ───────────────────────────────────────────────────────
+// LM Studio is a LOCAL application. It cannot be accessed from Vercel servers
+// unless you expose it publicly (e.g. via ngrok, Cloudflare Tunnel, or a VPS).
+// To use LM Studio:
+//   - In Vercel: set LM_STUDIO_URL=https://your-public-lmstudio-url/v1
+//   - In local dev (via Express server): set LM_STUDIO_URL=http://localhost:1234/v1
 
 async function translateLMStudio(
     texts: string[],
@@ -55,7 +60,22 @@ async function translateLMStudio(
     customUrl?: string,
     context?: string
 ): Promise<string[]> {
-    const baseURL = customUrl || process.env.LM_STUDIO_URL || 'http://localhost:1234/v1';
+    // Priority: customUrl (from UI) > LM_STUDIO_URL env var > localhost fallback
+    const baseURL = customUrl?.trim() || process.env.LM_STUDIO_URL || 'http://localhost:1234/v1';
+
+    // Validate that the URL is not a localhost URL when running on Vercel (serverless)
+    const isVercel = !!process.env.VERCEL;
+    const isLocalUrl = baseURL.includes('localhost') || baseURL.includes('127.0.0.1');
+    if (isVercel && isLocalUrl) {
+        throw new Error(
+            'LM Studio URL is set to localhost, which cannot be reached from Vercel servers. ' +
+            'Please provide a publicly accessible URL in the "Custom LM Studio URL" field ' +
+            '(e.g. via ngrok: https://xxxx.ngrok-free.app/v1), ' +
+            'or set LM_STUDIO_URL in your Vercel environment variables.'
+        );
+    }
+
+    console.log(`[API] Connecting to LM Studio at: ${baseURL}`);
 
     const client = new OpenAI({ baseURL, apiKey: 'lm-studio' });
 
@@ -71,30 +91,54 @@ Do not include markdown formatting or keys like "translations".`;
 
     prompt += `\n\nSource Texts (${texts.length} items):\n${JSON.stringify(texts)}`;
 
-    const response = await client.chat.completions.create({
-        model: 'local-model',
-        messages: [
-            { role: 'system', content: 'You are a helpful translator. RESTRICTION: output strictly valid JSON array. Length MUST match input.' },
-            { role: 'user', content: prompt },
-        ],
-        temperature: 0.1,
-    });
-
-    const content = response.choices[0].message.content;
-    if (!content) throw new Error('No content received from LM Studio');
-
-    const cleanContent = content.replace(/```json/g, '').replace(/```/g, '').trim();
-
-    let parsed;
     try {
-        parsed = JSON.parse(cleanContent);
-    } catch {
-        throw new Error('Model failed to return valid JSON array.');
-    }
+        const response = await client.chat.completions.create({
+            model: 'local-model',
+            messages: [
+                { role: 'system', content: 'You are a helpful translator. RESTRICTION: output strictly valid JSON array. Length MUST match input.' },
+                { role: 'user', content: prompt },
+            ],
+            temperature: 0.1,
+        });
 
-    if (Array.isArray(parsed)) return parsed as string[];
-    if (parsed.translations && Array.isArray(parsed.translations)) return parsed.translations;
-    return Object.values(parsed).flat() as string[];
+        const content = response.choices[0].message.content;
+        if (!content) throw new Error('No content received from LM Studio');
+
+        const cleanContent = content.replace(/```json/g, '').replace(/```/g, '').trim();
+
+        let parsed;
+        try {
+            parsed = JSON.parse(cleanContent);
+        } catch {
+            throw new Error('Model failed to return valid JSON array.');
+        }
+
+        if (Array.isArray(parsed)) return parsed as string[];
+        if (parsed.translations && Array.isArray(parsed.translations)) return parsed.translations;
+        return Object.values(parsed).flat() as string[];
+
+    } catch (error: any) {
+        // Distinguish connection errors from other errors
+        const msg: string = error?.message || '';
+        const isConnectionError =
+            msg.includes('ECONNREFUSED') ||
+            msg.includes('ENOTFOUND') ||
+            msg.includes('fetch failed') ||
+            msg.includes('Connection error') ||
+            msg.includes('connect') ||
+            error?.cause?.code === 'ECONNREFUSED';
+
+        if (isConnectionError) {
+            throw new Error(
+                `Cannot connect to LM Studio at "${baseURL}". ` +
+                `Make sure LM Studio is running and the server is started. ` +
+                (isVercel
+                    ? 'On Vercel, use a publicly accessible URL (e.g. ngrok).'
+                    : 'On local dev, ensure LM Studio is running on port 1234.')
+            );
+        }
+        throw error;
+    }
 }
 
 // ─── Google Provider ──────────────────────────────────────────────────────────

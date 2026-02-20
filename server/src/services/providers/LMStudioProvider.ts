@@ -62,9 +62,23 @@ export class LMStudioProvider implements TranslationProvider {
 
             return Object.values(parsed).flat() as string[];
 
-        } catch (error) {
+        } catch (error: any) {
             console.error("LM Studio Translation Error:", error);
-            throw new Error("Failed to translate with LM Studio. Ensure it is running and server is on.");
+            const msg: string = error?.message || '';
+            const isConnectionError =
+                msg.includes('ECONNREFUSED') ||
+                msg.includes('ENOTFOUND') ||
+                msg.includes('fetch failed') ||
+                msg.includes('Connection error') ||
+                error?.cause?.code === 'ECONNREFUSED';
+
+            if (isConnectionError) {
+                throw new Error(
+                    `Cannot connect to LM Studio at "${this.client.baseURL}". ` +
+                    `Make sure LM Studio is running and the local server is started on port 1234.`
+                );
+            }
+            throw error;
         }
     }
 }
