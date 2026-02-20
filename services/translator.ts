@@ -1,7 +1,7 @@
 export const translateBatch = async (texts: string[], targetLocale: string, provider: string, customUrl?: string, context?: string): Promise<string[]> => {
   console.log(`[Frontend] Preparing to send request to http://localhost:3001/api/translate`, { texts: texts.length, provider, customUrl, context });
   try {
-    const response = await fetch('http://localhost:3001/api/translate', {
+    const response = await fetch('/api/translate', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
