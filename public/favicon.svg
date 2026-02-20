@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48">
+  <!-- Dark rounded background -->
+  <rect width="48" height="48" rx="10" fill="#0f172a"/>
+  <!-- Globe2 icon (same as lucide Globe2, scaled to fit) -->
+  <g stroke="#3b82f6" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none" transform="translate(8,8) scale(1.333)">
+    <circle cx="12" cy="12" r="10"/>
+    <line x1="2" y1="12" x2="22" y2="12"/>
+    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+    <path d="M2 9h20M2 15h20"/>
+  </g>
+</svg>
