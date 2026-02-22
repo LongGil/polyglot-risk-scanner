@@ -40,11 +40,12 @@ A specialized **Game Localization Risk Scanner & Toolset** designed for game dev
 
 - [Node.js](https://nodejs.org/) (v18+)
 - npm or yarn
+- run LM Studio -> Local Server -> Load Model
 
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/yourusername/polyglot-risk-scanner.git
+git clone https://github.com/LongGil/polyglot-risk-scanner.git
 cd polyglot-risk-scanner
 ```
 
@@ -108,9 +109,7 @@ docker-compose up --build
 2. **Configure Translation**:
    - Choose a **Translation Service** (e.g., OpenAI, LM Studio).
    - Select **Target Language(s)**:
-     - *Single*: One language.
      - *Custom*: Check multiple languages.
-     - *All*: Full batch translation.
 3. **Process**: Click "Process Localization".
 4. **Review Risks**: Check the results table for warnings (red/yellow indicators).
 5. **Export**: Download the translated files or the risk report.
