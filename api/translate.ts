@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import OpenAI from 'openai';
+import axios from 'axios';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -143,8 +144,53 @@ Do not include markdown formatting or keys like "translations".`;
 
 // ─── Google Provider ──────────────────────────────────────────────────────────
 
-async function translateGoogle(texts: string[], targetLang: string): Promise<string[]> {
-    throw new Error("Provider 'google' is not yet implemented.");
+async function translateGoogle(
+    texts: string[],
+    targetLang: string,
+    context?: string,
+    userApiKey?: string
+): Promise<string[]> {
+    if (!texts.length) return [];
+
+    const apiKey = userApiKey?.trim() || process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY;
+    if (!apiKey) throw new Error("Provider 'google' requires an API Key. Please enter your Gemini API Key in the Configuration panel.");
+
+    let prompt = `Translate the following texts to ${targetLang}. Return ONLY a JSON array of strings containing the translations, in the exact same order as the input. Do not include markdown formatting or backticks around the JSON array.`;
+    if (context && context.trim()) {
+        prompt += `\n\nContext: ${context}`;
+    }
+
+    prompt += `\n\nInput texts:\n${JSON.stringify(texts)}`;
+
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash:generateContent?key=${apiKey}`;
+
+    try {
+        const response = await axios.post(url, {
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: {
+                temperature: 0.1
+            }
+        }, {
+            headers: { 'Content-Type': 'application/json' }
+        });
+
+        const textResponse = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+        if (!textResponse) throw new Error("No content received from Gemini");
+
+        // Clean up backticks if Gemini added them
+        const cleanText = textResponse.replace(/^```json\n/, '').replace(/\n```$/, '').replace(/^```\n/, '').trim();
+        const parsed = JSON.parse(cleanText);
+
+        if (Array.isArray(parsed)) return parsed;
+        if (parsed.translations && Array.isArray(parsed.translations)) return parsed.translations;
+        return Object.values(parsed).flat() as string[];
+
+    } catch (error: any) {
+        console.error("Gemini Translation Error:", error);
+        const errorMessage = error.response?.data?.error?.message || error.message || "Unknown Gemini error";
+        throw new Error(`Gemini Error: ${errorMessage}`);
+    }
 }
 
 // ─── DeepL Provider ───────────────────────────────────────────────────────────
@@ -187,7 +233,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 translated = await translateLMStudio(texts, targetLang, customUrl, context);
                 break;
             case 'google':
-                translated = await translateGoogle(texts, targetLang);
+                translated = await translateGoogle(texts, targetLang, context, userApiKey);
                 break;
             case 'deepl':
                 translated = await translateDeepL(texts, targetLang);
