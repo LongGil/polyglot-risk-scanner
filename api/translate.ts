@@ -162,7 +162,7 @@ async function translateGoogle(
 
     prompt += `\n\nInput texts:\n${JSON.stringify(texts)}`;
 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash:generateContent?key=${apiKey}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
 
     try {
         const response = await axios.post(url, {
