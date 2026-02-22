@@ -38,10 +38,18 @@ export class TranslationService {
         }
     }
 
-    public getProvider(name: SupportedProvider, options?: { customUrl?: string }): TranslationProvider {
+    public getProvider(name: SupportedProvider, options?: { customUrl?: string, apiKey?: string }): TranslationProvider {
         // dynamic override for lmstudio
         if (name === 'lmstudio' && options?.customUrl) {
             return new LMStudioProvider(options.customUrl);
+        }
+
+        // dynamic instantiation if apiKey is provided and not empty
+        const dynamicApiKey = options?.apiKey?.trim();
+        if (dynamicApiKey) {
+            if (name === 'google') return new GoogleProvider(dynamicApiKey);
+            if (name === 'openai') return new OpenAIProvider(dynamicApiKey);
+            if (name === 'deepl') return new DeepLProvider(dynamicApiKey);
         }
 
         const provider = this.providers.get(name);

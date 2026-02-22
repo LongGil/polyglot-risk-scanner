@@ -1,7 +1,11 @@
 import React from 'react';
-import { Globe2, Github } from 'lucide-react';
+import { Globe2, Github, Settings } from 'lucide-react';
 
-const Header: React.FC = () => {
+interface HeaderProps {
+  onOpenSettings?: () => void;
+}
+
+const Header: React.FC<HeaderProps> = ({ onOpenSettings }) => {
   return (
     <header className="border-b border-slate-700 bg-slate-900/50 backdrop-blur-md sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-3 sm:px-4 py-3 sm:py-4 flex items-center justify-between gap-2">
@@ -17,6 +21,16 @@ const Header: React.FC = () => {
           </div>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
+          {onOpenSettings && (
+            <button
+              onClick={onOpenSettings}
+              className="flex items-center gap-1.5 text-xs text-slate-300 bg-slate-800 hover:bg-slate-700 hover:text-white transition-colors px-2.5 sm:px-3 py-1.5 rounded-full border border-slate-700 font-medium"
+              title="Settings"
+            >
+              <Settings className="w-3.5 h-3.5 flex-shrink-0" />
+              <span className="hidden sm:inline">Settings</span>
+            </button>
+          )}
           <a
             href="https://ko-fi.com/longgilstudio"
             target="_blank"

@@ -12,6 +12,7 @@ import { Play, Download, RefreshCw, FileDown } from 'lucide-react';
 // @ts-ignore
 import JSZip from 'jszip';
 import DebugConsole from './components/DebugConsole';
+import SettingsDialog from './components/SettingsDialog';
 
 const App: React.FC = () => {
   // State
@@ -19,9 +20,9 @@ const App: React.FC = () => {
   const [rawText, setRawText] = useState<string>(MOCK_INITIAL_TEXT);
   const [fileName, setFileName] = useState<string | null>(null);
 
-  const [targetLang, setTargetLang] = useState<string>('de-DE');
+  const [targetLang, setTargetLang] = useState<string>('vi-VN');
   const [selectionMode, setSelectionMode] = useState<'single' | 'all' | 'custom'>('custom');
-  const [selectedLangs, setSelectedLangs] = useState<Set<string>>(new Set(['en-US']));
+  const [selectedLangs, setSelectedLangs] = useState<Set<string>>(new Set(['vi-VN']));
   const [isLangPanelOpen, setIsLangPanelOpen] = useState(false);
   const langPanelRef = useRef<HTMLDivElement>(null);
 
@@ -56,12 +57,12 @@ const App: React.FC = () => {
   };
 
   const isMultiLang = selectionMode === 'all' || (selectionMode === 'custom' && selectedLangs.size > 1);
-  const [provider, setProvider] = useState<string>('lmstudio');
+  const [provider, setProvider] = useState<string>('google');
   const [lmStudioUrl, setLmStudioUrl] = useState<string>('http://localhost:1234/v1');
   const [apiKey, setApiKey] = useState<string>('');
-  const [showApiKey, setShowApiKey] = useState<boolean>(false);
   const [context, setContext] = useState<string>('');
   const [batchSize, setBatchSize] = useState<number>(50);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [results, setResults] = useState<ProcessedEntry[]>([]);
   const [originalMetadata, setOriginalMetadata] = useState<ParseResult['metadata'] | null>(null);
@@ -207,7 +208,7 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans pb-20">
-      <Header />
+      <Header onOpenSettings={() => setIsSettingsOpen(true)} />
 
       <main className="max-w-7xl mx-auto px-4 pt-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -326,114 +327,6 @@ const App: React.FC = () => {
                   )}
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-slate-400 mb-1.5">Translation Service</label>
-                  <div className="relative">
-                    <select
-                      value={provider}
-                      onChange={(e) => setProvider(e.target.value)}
-                      className="w-full bg-slate-800 border border-slate-700 text-white text-sm rounded-lg focus:ring-accent-500 focus:border-accent-500 block p-2.5 appearance-none"
-                    >
-                      <option value="mock">Mock (Local Simulation)</option>
-                      <option value="openai">OpenAI (Requires API Key)</option>
-                      <option value="lmstudio">LM Studio (Local Host:1234)</option>
-                      <option value="google">Google Translate</option>
-                      <option value="deepl">DeepL</option>
-                    </select>
-                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-400">
-                      <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" /></svg>
-                    </div>
-                  </div>
-                </div>
-
-                {provider === 'lmstudio' && (
-                  <div>
-                    <label className="block text-sm font-medium text-slate-400 mb-1.5">LM Studio URL</label>
-                    <input
-                      type="text"
-                      value={lmStudioUrl}
-                      onChange={(e) => setLmStudioUrl(e.target.value)}
-                      placeholder="http://localhost:1234/v1"
-                      className="w-full bg-slate-800 border border-slate-700 text-white text-sm rounded-lg focus:ring-accent-500 focus:border-accent-500 block p-2.5"
-                    />
-                    <p className="text-xs text-slate-500 mt-1">
-                      Standard local server URL. Ensure CORS is enabled if needed.
-                    </p>
-                  </div>
-                )}
-
-                {['openai', 'google', 'deepl'].includes(provider) && (
-                  <div>
-                    <label className="block text-sm font-medium text-slate-400 mb-1.5">
-                      API Key
-                      <span className="ml-1 text-slate-600 font-normal">(optional if set on server)</span>
-                    </label>
-                    <div className="relative">
-                      <input
-                        type={showApiKey ? 'text' : 'password'}
-                        value={apiKey}
-                        onChange={(e) => setApiKey(e.target.value)}
-                        placeholder={provider === 'openai' ? 'sk-...' : provider === 'deepl' ? 'xxxxxxxx-xxxx-...' : 'AIzaSy...'}
-                        className="w-full bg-slate-800 border border-slate-700 text-white text-sm rounded-lg focus:ring-accent-500 focus:border-accent-500 block p-2.5 pr-10"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowApiKey(v => !v)}
-                        className="absolute inset-y-0 right-0 flex items-center px-3 text-slate-400 hover:text-white transition-colors"
-                        title={showApiKey ? 'Hide key' : 'Show key'}
-                      >
-                        {showApiKey ? (
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18" /></svg>
-                        ) : (
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
-                        )}
-                      </button>
-                    </div>
-                    <p className="text-xs text-slate-500 mt-1">
-                      Used directly from your browser and never stored.
-                    </p>
-                  </div>
-                )}
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-400 mb-1.5">Batch Size</label>
-                  <div className="flex gap-1 mb-1 bg-slate-800 rounded-lg p-1">
-                    {[1, 10, 50, 0].map((size) => (
-                      <button
-                        key={size}
-                        type="button"
-                        onClick={() => setBatchSize(size)}
-                        className={`flex-1 text-xs py-1.5 px-2 rounded-md transition-all font-medium ${batchSize === size
-                          ? 'bg-accent-500 text-white shadow-sm'
-                          : 'text-slate-400 hover:text-white'
-                          }`}
-                      >
-                        {size === 0 ? 'All' : size}
-                      </button>
-                    ))}
-                  </div>
-                  <p className="text-xs text-slate-500">
-                    {batchSize === 1 && '🐌 Slowest, most reliable (Sequential).'}
-                    {batchSize === 10 && '⚖️ Balanced reliability & speed.'}
-                    {batchSize === 50 && '⚡ Standard batch speed.'}
-                    {batchSize === 0 && '🚀 Fastest. Warning: May hit token limits.'}
-                  </p>
-                </div>
-
-                <div className="mt-4 border-t border-slate-800 pt-4">
-                  <label className="block text-sm font-medium text-slate-400 mb-1.5">
-                    Translation Context <span className="text-slate-600 font-normal">(Optional)</span>
-                  </label>
-                  <textarea
-                    value={context}
-                    onChange={(e) => setContext(e.target.value)}
-                    placeholder="e.g. 'This text is for a button in a game menu' or 'Marketing slogan for a racing game'"
-                    className="w-full bg-slate-800 border border-slate-700 text-white text-sm rounded-lg focus:ring-accent-500 focus:border-accent-500 block p-2.5 h-20 resize-none"
-                  />
-                  <p className="text-xs text-slate-500 mt-1">
-                    Provide context to guide the AI translator (supported by OpenAI & LM Studio).
-                  </p>
-                </div>
               </div>
             </div>
 
@@ -451,6 +344,22 @@ const App: React.FC = () => {
                 fileName={fileName}
                 setFileName={setFileName}
               />
+
+              <div className="mt-6 border-t border-slate-800 pt-6">
+                <label className="block text-sm font-medium text-slate-300 mb-1.5 flex items-center gap-2">
+                  <span className="w-1 h-4 bg-slate-500 rounded-full"></span>
+                  Translation Context <span className="text-slate-500 font-normal">(Optional)</span>
+                </label>
+                <textarea
+                  value={context}
+                  onChange={(e) => setContext(e.target.value)}
+                  placeholder="e.g. 'This text is for a button in a game menu' or 'Marketing slogan for a racing game'"
+                  className="w-full bg-slate-800 border border-slate-700 text-white text-sm rounded-xl focus:ring-accent-500 focus:border-accent-500 block p-3 h-24 resize-none shadow-sm transition-all"
+                />
+                <p className="text-xs text-slate-500 mt-1.5">
+                  Provide context to guide the AI translator (supported by OpenAI & LM Studio).
+                </p>
+              </div>
 
               <div className="mt-6">
                 <Button
@@ -518,6 +427,20 @@ const App: React.FC = () => {
       </main>
 
       <DebugConsole />
+
+      {isSettingsOpen && (
+        <SettingsDialog
+          onClose={() => setIsSettingsOpen(false)}
+          provider={provider}
+          setProvider={setProvider}
+          lmStudioUrl={lmStudioUrl}
+          setLmStudioUrl={setLmStudioUrl}
+          apiKey={apiKey}
+          setApiKey={setApiKey}
+          batchSize={batchSize}
+          setBatchSize={setBatchSize}
+        />
+      )}
     </div>
   );
 };
