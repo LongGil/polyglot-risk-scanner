@@ -19,7 +19,7 @@ export class OpenAIProvider implements TranslationProvider {
 
         try {
             const response = await this.client.chat.completions.create({
-                model: "gpt-3.5-turbo",
+                model: "gpt-5-nano",
                 messages: [
                     { role: "system", content: "You are a helpful translator. You must return valid JSON." },
                     { role: "user", content: `${prompt}\n\n${JSON.stringify(texts)}` }
