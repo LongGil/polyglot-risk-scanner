@@ -195,8 +195,58 @@ async function translateGoogle(
 
 // ─── DeepL Provider ───────────────────────────────────────────────────────────
 
-async function translateDeepL(texts: string[], targetLang: string): Promise<string[]> {
-    throw new Error("Provider 'deepl' is not yet implemented.");
+async function translateDeepL(
+    texts: string[],
+    targetLang: string,
+    context?: string,
+    userApiKey?: string
+): Promise<string[]> {
+    if (!texts.length) return [];
+
+    const apiKey = userApiKey?.trim() || process.env.DEEPL_API_KEY;
+    if (!apiKey) throw new Error("Provider 'deepl' requires an API Key. Please enter your DeepL API Key in the Configuration panel.");
+
+    const isFree = apiKey.endsWith(':fx');
+    const url = isFree ? 'https://api-free.deepl.com/v2/translate' : 'https://api.deepl.com/v2/translate';
+
+    const getDeepLTargetLang = (langStr: string) => {
+        const lang = langStr.toUpperCase();
+        if (lang.startsWith('EN')) return lang === 'EN-GB' ? 'EN-GB' : 'EN-US';
+        if (lang.startsWith('PT')) return lang === 'PT-BR' ? 'PT-BR' : 'PT-PT';
+        return lang.split('-')[0];
+    };
+
+    try {
+        const data: any = {
+            text: texts,
+            target_lang: getDeepLTargetLang(targetLang),
+        };
+
+        if (context && context.trim()) {
+            data.context = context.trim();
+        }
+
+        const response = await axios.post(
+            url,
+            data,
+            {
+                headers: {
+                    'Authorization': `DeepL-Auth-Key ${apiKey}`,
+                    'Content-Type': 'application/json',
+                },
+            }
+        );
+
+        if (!response.data || !response.data.translations) {
+            throw new Error('Invalid response from DeepL');
+        }
+
+        return response.data.translations.map((t: any) => t.text);
+    } catch (error: any) {
+        console.error("DeepL Translation Error:", error.response?.data || error.message);
+        const errorMessage = error.response?.data?.message || error.message || "Unknown DeepL error";
+        throw new Error(`DeepL Error: ${errorMessage}`);
+    }
 }
 
 // ─── Handler ──────────────────────────────────────────────────────────────────
@@ -236,7 +286,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 translated = await translateGoogle(texts, targetLang, context, userApiKey);
                 break;
             case 'deepl':
-                translated = await translateDeepL(texts, targetLang);
+                translated = await translateDeepL(texts, targetLang, context, userApiKey);
                 break;
             default:
                 return res.status(400).json({ error: `Unknown provider: ${selectedProvider}` });
