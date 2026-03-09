@@ -11,8 +11,8 @@ A specialized **Game Localization Risk Scanner & Toolset** designed for game dev
   - CJK font compatibility issues
   - RTL (Right-to-Left) text direction checks
 - **🤖 Multi-Provider AI Translation**:
-  - **OpenAI** (GPT-4/3.5)
-  - **Google Translate**
+  - **OpenAI**
+  - **Google (Gemini)**
   - **DeepL**
   - **LM Studio** (Run local LLMs like Llama 3, Mistral, etc.)
   - **Mock Provider** (For testing without API costs)
