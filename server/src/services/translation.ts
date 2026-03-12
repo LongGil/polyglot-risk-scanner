@@ -4,6 +4,7 @@ import { MockProvider } from './providers/MockProvider';
 import { GoogleProvider } from './providers/GoogleProvider';
 import { DeepLProvider } from './providers/DeepLProvider';
 import { LMStudioProvider } from './providers/LMStudioProvider';
+import { LongGilStudioProvider } from './providers/LongGilStudioProvider';
 
 export class TranslationService {
     private providers: Map<string, TranslationProvider> = new Map();
@@ -35,6 +36,12 @@ export class TranslationService {
 
         if (deepLKey) {
             this.providers.set('deepl', new DeepLProvider(deepLKey));
+        }
+
+        const longGilStudioUrl = process.env.LONGGILSTUDIO_URL;
+        const longGilStudioSecret = process.env.LOCALIZATION_SECRET;
+        if (longGilStudioUrl && longGilStudioSecret) {
+            this.providers.set('longgilstudio', new LongGilStudioProvider(longGilStudioUrl, longGilStudioSecret));
         }
     }
 

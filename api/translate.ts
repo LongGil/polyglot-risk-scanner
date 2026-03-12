@@ -4,7 +4,7 @@ import axios from 'axios';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type SupportedProvider = 'openai' | 'google' | 'deepl' | 'mock' | 'lmstudio';
+type SupportedProvider = 'openai' | 'google' | 'deepl' | 'mock' | 'lmstudio' | 'longgilstudio';
 
 // ─── Mock Provider ────────────────────────────────────────────────────────────
 
@@ -249,6 +249,53 @@ async function translateDeepL(
     }
 }
 
+// ─── LongGilStudio Provider ───────────────────────────────────────────────────
+
+async function translateLongGilStudio(
+    texts: string[],
+    targetLang: string,
+    context?: string
+): Promise<string[]> {
+    if (!texts.length) return [];
+
+    const workerUrl = process.env.LONGGILSTUDIO_URL;
+    if (!workerUrl) throw new Error("LongGilStudio requires 'LONGGILSTUDIO_URL' environment variable to be set.");
+
+    const token = process.env.LOCALIZATION_SECRET;
+    if (!token) throw new Error("LongGilStudio requires 'LOCALIZATION_SECRET' environment variable to be set.");
+
+    try {
+        const promises = texts.map(async (text) => {
+            const response = await axios.post(
+                workerUrl,
+                {
+                    text: text,
+                    target_lang: targetLang,
+                    context: context || ""
+                },
+                {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                    },
+                }
+            );
+
+            if (!response.data || typeof response.data.translated !== 'string') {
+                throw new Error('Invalid response from LongGilStudio Worker');
+            }
+            return response.data.translated;
+        });
+
+        return await Promise.all(promises);
+    } catch (error: any) {
+        console.error("LongGilStudio Translation Error:", error.response?.data || error.message);
+        const data = error.response?.data;
+        const errorMessage = data?.details || data?.error || error.message || "Unknown error from Worker";
+        throw new Error(`LongGilStudio Error: ${errorMessage}`);
+    }
+}
+
 // ─── Handler ──────────────────────────────────────────────────────────────────
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -287,6 +334,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 break;
             case 'deepl':
                 translated = await translateDeepL(texts, targetLang, context, userApiKey);
+                break;
+            case 'longgilstudio':
+                translated = await translateLongGilStudio(texts, targetLang, context);
                 break;
             default:
                 return res.status(400).json({ error: `Unknown provider: ${selectedProvider}` });
