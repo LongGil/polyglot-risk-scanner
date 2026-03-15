@@ -90,7 +90,7 @@ const InputSection: React.FC<InputSectionProps> = ({
       </div>
 
       <div className="relative group">
-        <div className={`absolute -inset-0.5 bg-gradient-to-r from-accent-600 to-indigo-600 rounded-xl opacity-20 group-hover:opacity-40 transition duration-500 blur`}></div>
+        <div className={`absolute -inset-0.5 bg-gradient-to-r from-accent-600 to-accent-500 rounded-xl opacity-20 group-hover:opacity-40 transition duration-500 blur`}></div>
         <div className="relative bg-slate-900 rounded-xl border border-slate-700 p-1">
           {inputMode === 'file' ? (
             <div
