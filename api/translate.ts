@@ -258,10 +258,10 @@ async function translateLongGilStudio(
 ): Promise<string[]> {
     if (!texts.length) return [];
 
-    const workerUrl = process.env.LONGGILSTUDIO_URL;
+    const workerUrl = process.env.LONGGILSTUDIO_URL?.replace(/"/g, '').trim();
     if (!workerUrl) throw new Error("LongGilStudio requires 'LONGGILSTUDIO_URL' environment variable to be set.");
 
-    const token = process.env.LOCALIZATION_SECRET;
+    const token = process.env.LOCALIZATION_SECRET?.replace(/"/g, '').trim();
     if (!token) throw new Error("LongGilStudio requires 'LOCALIZATION_SECRET' environment variable to be set.");
 
     try {

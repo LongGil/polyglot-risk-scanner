@@ -32,7 +32,11 @@ const Button: React.FC<ButtonProps> = ({
       {...props}
     >
       {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
-      {!isLoading && icon && <span className="w-4 h-4">{icon}</span>}
+      {!isLoading && icon && (
+        <span className="flex items-center justify-center w-4 h-4 shrink-0 [&>svg]:w-4 [&>svg]:h-4">
+          {icon}
+        </span>
+      )}
       {children}
     </button>
   );

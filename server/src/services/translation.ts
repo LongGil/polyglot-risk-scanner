@@ -38,8 +38,8 @@ export class TranslationService {
             this.providers.set('deepl', new DeepLProvider(deepLKey));
         }
 
-        const longGilStudioUrl = process.env.LONGGILSTUDIO_URL;
-        const longGilStudioSecret = process.env.LOCALIZATION_SECRET;
+        const longGilStudioUrl = process.env.LONGGILSTUDIO_URL?.replace(/"/g, '').trim();
+        const longGilStudioSecret = process.env.LOCALIZATION_SECRET?.replace(/"/g, '').trim();
         if (longGilStudioUrl && longGilStudioSecret) {
             this.providers.set('longgilstudio', new LongGilStudioProvider(longGilStudioUrl, longGilStudioSecret));
         }
