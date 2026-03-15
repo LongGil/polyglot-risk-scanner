@@ -1,29 +1,75 @@
 # 🌐 Polyglot Risk Scanner
 
-A specialized **Game Localization Risk Scanner & Toolset** designed for game developers and LQA teams. It streamlines the localization process by analyzing game text files for critical risks—such as UI text expansion, missing variable placeholders (e.g., `{0}`, `%s`), and CJK font compatibility issues. Supports **Simultaneous Multi-Language Translation** via AI providers like **OpenAI**, **Google Translate**, **DeepL**, and local LLMs via **LM Studio**.
+> **AI-Powered Game Localization Platform** — Translate your game into 18+ languages simultaneously, then automatically audit every output for LQA risks before it ships.
 
-## ✨ Features
+---
 
-- **📂 Game Text Parsing**: Upload and parse custom text-based localization files (supports common game formats).
-- **🔍 LQA Risk Detection**: Automatically scans for potential localization issues:
-  - Text expansion/contraction risks
-  - Missing placeholders
-  - CJK font compatibility issues
-  - RTL (Right-to-Left) text direction checks
-- **🤖 Multi-Provider AI Translation**:
-  - **OpenAI**
-  - **Google (Gemini)**
-  - **DeepL**
-  - **LM Studio** (Run local LLMs like Llama 3, Mistral, etc.)
-  - **Mock Provider** (For testing without API costs)
-- **⚡ Batch & Custom Translation**:
-  - **Single Mode**: Translate to one specific language.
-  - **Batch Mode**: Automatically translate to all 18+ supported languages at once.
-  - **Custom Mode**: Select specific languages to translate simultaneously.
-- **� Export Reports**:
-  - Download valid localization files (`.txt`).
-  - Bulk download as `.zip` archive.
-  - Export detailed risk reports as `.csv`.
+## 🗺️ What Is This?
+
+Modern game localization has two distinct pain points:
+
+| Problem | What this tool does |
+| :--- | :--- |
+| **Translation is slow & expensive** | Batch-translate to all target languages in a single click using AI providers |
+| **Translated text breaks the UI** | Automatically scan every output for expansion, placeholder, font & RTL risks |
+
+This tool is purpose-built for **game localization engineers and LQA teams** who need both speed *and* safety.
+
+---
+
+## ✨ Part 1 — Localization Engine
+
+The core of the tool is a **multi-provider, multi-language translation pipeline**.
+
+### Supported AI Providers
+
+| Provider | Type | Notes |
+| :--- | :--- | :--- |
+| **OpenAI** (GPT-4o, GPT-4, …) | Cloud | Best quality for nuanced game text |
+| **Google Gemini** | Cloud | Fast & cost-effective |
+| **DeepL** | Cloud | Excellent for European languages |
+| **LM Studio** | Local | Run Llama 3, Mistral, etc. — zero API cost |
+| **LongGil Studio** | Custom | Internal/on-premise endpoint |
+| **Mock Provider** | Test | No API calls — great for UI development |
+
+### Translation Modes
+
+- **Single** — Translate the source into one specific language.
+- **Batch** — Automatically translate to all 18+ supported languages at once.
+- **Custom** — Pick any combination of languages and run them simultaneously.
+
+### Supported Languages (18+)
+
+`vi` `en` `ja` `ko` `zh-CN` `zh-TW` `fr` `de` `es` `pt-BR` `it` `ru` `ar` `th` `id` `pl` `tr` `nl`
+
+### Input Formats
+
+Upload or paste any **text-based localization file** — common game formats (key=value, flat JSON, custom delimiters) are all supported.
+
+---
+
+## 🔍 Part 2 — Risk Scanner (LQA)
+
+After translation, every output is automatically audited for four categories of localization risk:
+
+| Risk Category | What is checked |
+| :--- | :--- |
+| **Text Expansion / Contraction** | Translated text is significantly longer or shorter than the source (breaks UI layout) |
+| **Missing Placeholders** | Variables like `{0}`, `%s`, `{player_name}` are absent or corrupted in the translation |
+| **CJK Font Compatibility** | Chinese / Japanese / Korean characters that may not render in the game's font |
+| **RTL Direction** | Arabic / Hebrew text requiring right-to-left layout support |
+
+Risks are surfaced inline in the results table with **color-coded severity indicators** (🔴 critical / 🟡 warning) so QA can triage immediately.
+
+---
+
+## 📤 Export & Reporting
+
+- **Download translated file** (`.txt`) — ready to drop into your game's localization directory.
+- **Bulk archive** (`.zip`) — all languages in a single download.
+- **Risk report** (`.csv`) — full audit log for QA sign-off, filterable by risk type and language.
+
+---
 
 ## 🛠️ Tech Stack
 
@@ -34,13 +80,15 @@ A specialized **Game Localization Risk Scanner & Toolset** designed for game dev
 | **AI Integration** | OpenAI SDK, REST (LM Studio, Google, DeepL) |
 | **Containerization** | Docker, Docker Compose |
 
+---
+
 ## 🚀 Getting Started
 
 ### Prerequisites
 
-- [Node.js](https://nodejs.org/) (v18+)
+- [Node.js](https://nodejs.org/) v18+
 - npm or yarn
-- run LM Studio -> Local Server -> Load Model
+- *(Optional)* LM Studio running with a local model loaded → **Local Server** tab
 
 ### 1. Clone the repository
 
@@ -52,71 +100,73 @@ cd polyglot-risk-scanner
 ### 2. Frontend Setup
 
 ```bash
-# Install dependencies
 npm install
-
-# Run development server
 npm run dev
 ```
-The frontend will be available at `http://localhost:5173`.
+
+Frontend → `http://localhost:5173`
 
 ### 3. Backend Setup
 
-The backend handles the API requests to translation providers.
-
 ```bash
 cd server
-
-# Install dependencies
 npm install
-
-# Create environment file
 cp .env.example .env
 ```
 
-**Configure your `.env` file:**
+**Configure `.env`:**
+
 ```env
 PORT=3001
 
-# AI / Translation Providers (Add keys as needed)
+# Cloud Translation Providers
 OPENAI_API_KEY=sk-...
 GOOGLE_API_KEY=...
 DEEPL_API_KEY=...
 
-# Local LLM (Optional)
+# Local LLM (optional)
 LM_STUDIO_URL=http://localhost:1234/v1
+
+# Custom / On-premise (optional)
+LONGGILSTUDIO_URL=...
+LOCALIZATION_SECRET=...
 ```
 
 ```bash
-# Run backend development server
 npm run dev
 ```
-The backend will run on `http://localhost:3001`.
 
-## 🐳 Docker Setup
+Backend → `http://localhost:3001`
 
-You can run the entire stack (Frontend + Backend) using Docker Compose.
+---
+
+## 🐳 Docker (Full Stack)
 
 ```bash
-# Build and start services
 docker-compose up --build
 ```
-- App: `http://localhost:3001` (Served via Express static files in production mode)
+
+App served at `http://localhost:3001` (Express static + API in one container).
+
+---
 
 ## 📖 Usage Guide
 
-1. **Select Source**: Paste your localization text or upload a file.
-2. **Configure Translation**:
-   - Choose a **Translation Service** (e.g., OpenAI, LM Studio).
-   - Select **Target Language(s)**:
-     - *Custom*: Check multiple languages.
-3. **Process**: Click "Process Localization".
-4. **Review Risks**: Check the results table for warnings (red/yellow indicators).
-5. **Export**: Download the translated files or the risk report.
+1. **Paste or upload** your localization source file.
+2. **Choose a Translation Provider** (OpenAI, LM Studio, DeepL, …).
+3. **Select Translation Mode**:
+   - *Single* → one language
+   - *Batch* → all 18+ languages
+   - *Custom* → pick specific languages
+4. **Click "Process Localization"** — translation runs in parallel.
+5. **Review the Risk Scanner results** — warnings appear inline per language.
+6. **Export** — download translated files or the CSV risk report.
+
+---
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Pull requests are welcome. For large changes, please open an issue first to discuss what you'd like to change.
 
 ## 📄 License
 
