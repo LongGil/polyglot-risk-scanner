@@ -172,8 +172,6 @@ const App: React.FC = () => {
         }
       }
 
-      alert(`Hoàn tất! Đã xử lý xong toàn bộ ${textsToTranslate.length} dòng cho ${languagesToProcess.length} ngôn ngữ. 🎉`);
-
     } catch (error) {
       console.error("Processing failed", error);
       alert("An error occurred during processing.");
