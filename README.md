@@ -164,10 +164,25 @@ App served at `http://localhost:3001` (Express static + API in one container).
 
 ---
 
+## 💖 Sponsors & Backers
+
+Polyglot Risk Scanner is an open-source project. If you are an indie dev or a game studio using this platform to save time and localization costs, consider sponsoring us! 
+In return, your team or studio's logo will be prominently displayed here and in the application's UI.
+
+*Become our first sponsor on [GitHub Sponsors](https://github.com/sponsors/LongGil) or [Ko-fi](https://ko-fi.com/longgilstudio)!*
+
+### 💡 How to get your logo here!
+Are you a new sponsor? Thank you! To claim your spot and get your logo displayed both here and inside the App UI, please provide your details in this format (via PR or reaching out directly):
+```json
+{
+  "name": "Your Awesome Studio",
+  "logoUrl": "https://yourwebsite.com/logo.png",
+  "website": "https://yourwebsite.com"
+}
+```
+
+---
+
 ## 🤝 Contributing
 
 Pull requests are welcome. For large changes, please open an issue first to discuss what you'd like to change.
-
-## 📄 License
-
-MIT

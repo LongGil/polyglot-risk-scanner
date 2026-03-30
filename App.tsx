@@ -37,6 +37,17 @@ const App: React.FC = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Fetch sponsors list
+  const [sponsors, setSponsors] = useState<Array<{ name: string; logoUrl: string; website: string }>>([]);
+  useEffect(() => {
+    fetch('/sponsors.json')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) setSponsors(data);
+      })
+      .catch(err => console.log("No sponsors.json found or invalid format", err));
+  }, []);
+
   const toggleLang = (code: string) => {
     setSelectedLangs(prev => {
       const next = new Set(prev);
@@ -160,7 +171,7 @@ const App: React.FC = () => {
           // Continue with other languages even if one fails
         }
       }
-      
+
       alert(`Hoàn tất! Đã xử lý xong toàn bộ ${textsToTranslate.length} dòng cho ${languagesToProcess.length} ngôn ngữ. 🎉`);
 
     } catch (error) {
@@ -412,6 +423,57 @@ const App: React.FC = () => {
                 </div>
               </div>
             )}
+
+            {/* Sponsors Section */}
+            <div className="bg-slate-900 rounded-xl border border-slate-800 p-6 shadow-sm">
+              <h3 className="text-slate-400 text-sm font-medium uppercase tracking-wider mb-4 flex items-center gap-2">
+                <span className="text-pink-500">💖</span> Supported By
+              </h3>
+              {sponsors.length > 0 && (
+                <div className="mb-6 flex flex-wrap gap-4 items-center justify-center">
+                  {sponsors.map((sponsor, idx) => (
+                    <a 
+                      key={idx} 
+                      href={sponsor.website} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="block p-2 bg-slate-800/50 hover:bg-slate-800 rounded border border-slate-700 hover:border-pink-500/50 transition-all group"
+                      title={sponsor.name}
+                    >
+                      <img 
+                        src={sponsor.logoUrl} 
+                        alt={sponsor.name} 
+                        className="h-8 max-w-[120px] object-contain opacity-80 group-hover:opacity-100 transition-opacity" 
+                      />
+                    </a>
+                  ))}
+                </div>
+              )}
+
+              <div className="flex flex-col items-center justify-center py-6 text-center border-2 border-dashed border-slate-700/50 rounded-lg bg-slate-800/20">
+                <p className="text-slate-400 text-sm mb-4 max-w-xs">
+                  {sponsors.length > 0 
+                    ? "Join these amazing creators and studios in supporting our project!" 
+                    : "Sponsor this open-source project to feature your studio or indie team's logo here!"}
+                </p>
+                <div className="flex gap-3 text-nowrap">
+                  <Button
+                    variant="outline"
+                    onClick={() => window.open('https://github.com/sponsors/LongGil', '_blank')}
+                    className="h-8 text-xs border-pink-500/30 text-pink-400 hover:bg-pink-500/10 hover:border-pink-500/50"
+                  >
+                    GitHub Sponsors
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => window.open('https://ko-fi.com/longgilstudio', '_blank')}
+                    className="h-8 text-xs border-[#13C3FF]/30 text-[#13C3FF] hover:bg-[#13C3FF]/10 hover:border-[#13C3FF]/50"
+                  >
+                    Ko-fi
+                  </Button>
+                </div>
+              </div>
+            </div>
 
           </div>
 

@@ -46,10 +46,11 @@ const Header: React.FC<HeaderProps> = ({ onOpenSettings }) => {
             href="https://github.com/LongGil/polyglot-risk-scanner"
             target="_blank"
             rel="noreferrer"
-            className="flex items-center gap-1.5 text-xs text-slate-400 bg-slate-800 hover:bg-slate-700 hover:text-white transition-colors px-2.5 sm:px-3 py-1.5 rounded-full border border-slate-700"
+            className="flex items-center gap-1.5 text-xs text-slate-400 bg-slate-800 hover:bg-slate-700 hover:text-white hover:border-yellow-500/30 transition-all px-2.5 sm:px-3 py-1.5 rounded-full border border-slate-700 group"
           >
             <Github className="w-3.5 h-3.5 flex-shrink-0" />
-            <span className="hidden sm:inline">GitHub</span>
+            <span className="hidden sm:inline font-medium">Star</span>
+            <span className="text-yellow-500/50 group-hover:text-yellow-400 transition-colors text-sm leading-none">⭐️</span>
           </a>
         </div>
       </div>
