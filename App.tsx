@@ -91,11 +91,25 @@ const App: React.FC = () => {
       const textsToTranslate = entries.map(entry => entry.originalValue);
       console.log(`[Frontend] Sending ${textsToTranslate.length} texts to translate. First 5:`, textsToTranslate.slice(0, 5));
 
-      // 2. Translate & Scan (Batch mode with Chunking)
+      // 2. Pre-populate UI with pending states
+      const initialPendingResults: ProcessedEntry[] = [];
+      languagesToProcess.forEach(lang => {
+        entries.forEach(entry => {
+          initialPendingResults.push({
+            ...entry,
+            id: `${entry.id}-${lang.code}`,
+            translatedValue: '...',
+            risks: [],
+            languageCode: lang.code,
+            isPending: true
+          });
+        });
+      });
+      setResults(initialPendingResults);
+
+      // 3. Translate & Scan (Batch mode with Chunking)
       for (const lang of languagesToProcess) {
         try {
-          const allTranslatedForLang: string[] = [];
-
           // Determine chunk size (0 means all)
           const chunkSize = batchSize === 0 ? textsToTranslate.length : batchSize;
 
@@ -112,34 +126,42 @@ const App: React.FC = () => {
               apiKey || undefined
             );
 
-            allTranslatedForLang.push(...chunkTranslated);
+            // Dịch xong chunk nào, xử lý và cập nhật ngay vào UI
+            const chunkResults = entries.slice(i, i + chunkSize).map((entry, chunkIndex) => {
+              const translated = chunkTranslated[chunkIndex];
+              if (translated === undefined) {
+                console.warn(`[Warning] No translation returned for index ${i + chunkIndex}: "${entry.originalValue}"`);
+              }
+              const safeTranslated = translated ?? '';
+              const risks = scanForRisks(entry.originalValue, safeTranslated, lang.code);
+              return {
+                ...entry,
+                id: `${entry.id}-${lang.code}`, // Unique ID for React Key
+                translatedValue: safeTranslated,
+                risks,
+                languageCode: lang.code,
+                isPending: false
+              };
+            });
+
+            // Cập nhật state list hiện tại, thay thế các item pending bằng item đã xong
+            setResults(prev => {
+              const newResults = [...prev];
+              chunkResults.forEach(completedItem => {
+                const idx = newResults.findIndex(r => r.id === completedItem.id);
+                if (idx !== -1) newResults[idx] = completedItem;
+              });
+              return newResults;
+            });
           }
 
-          // Map results back to entries
-          const langResults = entries.map((entry, index) => {
-            const translated = allTranslatedForLang[index];
-            if (translated === undefined) {
-              console.warn(`[Warning] No translation returned for index ${index}: "${entry.originalValue}"`);
-            }
-            const safeTranslated = translated ?? '';
-            const risks = scanForRisks(entry.originalValue, safeTranslated, lang.code);
-            return {
-              ...entry,
-              id: `${entry.id}-${lang.code}`, // Unique ID for React Key
-              translatedValue: safeTranslated,
-              risks,
-              languageCode: lang.code
-            };
-          });
-
-          allResults.push(...langResults);
         } catch (langError) {
           console.error(`Error processing language ${lang.code}`, langError);
           // Continue with other languages even if one fails
         }
       }
-
-      setResults(allResults);
+      
+      alert(`Hoàn tất! Đã xử lý xong toàn bộ ${textsToTranslate.length} dòng cho ${languagesToProcess.length} ngôn ngữ. 🎉`);
 
     } catch (error) {
       console.error("Processing failed", error);

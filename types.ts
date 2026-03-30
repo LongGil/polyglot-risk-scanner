@@ -9,6 +9,7 @@ export interface ProcessedEntry extends LocalizationEntry {
   translatedValue: string;
   risks: RiskWarning[];
   languageCode: string;
+  isPending?: boolean;
 }
 
 export interface RiskWarning {

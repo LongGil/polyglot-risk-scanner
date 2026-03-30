@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { ProcessedEntry, RiskWarning } from '../types';
-import { AlertTriangle, AlertOctagon, Maximize2, CheckCircle2, Search, Filter, X, ShieldAlert, FileWarning } from 'lucide-react';
+import { AlertTriangle, AlertOctagon, Maximize2, CheckCircle2, Search, Filter, X, ShieldAlert, FileWarning, RefreshCw } from 'lucide-react';
 
 interface ResultsTableProps {
   entries: ProcessedEntry[];
@@ -145,10 +145,19 @@ const ResultsTable: React.FC<ResultsTableProps> = ({ entries }) => {
                       {entry.originalValue}
                     </td>
                     <td className="px-6 py-4 align-top text-slate-100 max-w-xs break-words bg-slate-800/30">
-                      {entry.translatedValue}
+                      {entry.isPending ? (
+                        <div className="flex items-center gap-2 text-slate-500 text-xs italic">
+                          <RefreshCw className="w-3 h-3 animate-spin" />
+                          <span>Translating...</span>
+                        </div>
+                      ) : (
+                        entry.translatedValue
+                      )}
                     </td>
                     <td className="px-6 py-4 align-top">
-                      {entry.risks.length === 0 ? (
+                      {entry.isPending ? (
+                        <span className="text-slate-600 text-xs italic">Pending</span>
+                      ) : entry.risks.length === 0 ? (
                         <div className="flex items-center gap-2 text-green-500/70 text-xs font-medium">
                           <CheckCircle2 className="w-4 h-4" />
                           <span>Pass</span>
