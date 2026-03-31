@@ -68,7 +68,7 @@ const App: React.FC = () => {
   };
 
   const isMultiLang = selectionMode === 'all' || (selectionMode === 'custom' && selectedLangs.size > 1);
-  const [provider, setProvider] = useState<string>('google');
+  const [provider, setProvider] = useState<string>('gptoss');
   const [lmStudioUrl, setLmStudioUrl] = useState<string>('http://localhost:1234/v1');
   const [cfGatewayUrl, setCfGatewayUrl] = useState<string>(''); // Empty = use server .env default
   const [apiKeys, setApiKeys] = useState<Record<string, string>>({});
