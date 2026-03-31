@@ -5,6 +5,7 @@ import { GoogleProvider } from './providers/GoogleProvider';
 import { DeepLProvider } from './providers/DeepLProvider';
 import { LMStudioProvider } from './providers/LMStudioProvider';
 import { LongGilStudioProvider } from './providers/LongGilStudioProvider';
+import { CloudflareGatewayProvider } from './providers/CloudflareGatewayProvider';
 
 export class TranslationService {
     private providers: Map<string, TranslationProvider> = new Map();
@@ -43,15 +44,25 @@ export class TranslationService {
         if (longGilStudioUrl && longGilStudioSecret) {
             this.providers.set('longgilstudio', new LongGilStudioProvider(longGilStudioUrl, longGilStudioSecret));
         }
+
+        const cloudflareGatewayUrl = process.env.CLOUDFLARE_GATEWAY_URL;
+        const cloudflareApiKey = process.env.CLOUDFLARE_API_KEY;
+        if (cloudflareGatewayUrl && cloudflareApiKey) {
+            this.providers.set('gptoss', new CloudflareGatewayProvider(cloudflareGatewayUrl, cloudflareApiKey));
+        }
     }
 
     public getProvider(name: SupportedProvider, options?: { customUrl?: string, apiKey?: string }): TranslationProvider {
-        // dynamic override for lmstudio
-        if (name === 'lmstudio' && options?.customUrl) {
-            return new LMStudioProvider(options.customUrl);
+
+        // ── LM Studio ──────────────────────────────────────────────────────────
+        // Override with user-provided URL if given; otherwise use env-registered provider
+        if (name === 'lmstudio') {
+            const lmUrl = options?.customUrl?.trim();
+            return lmUrl ? new LMStudioProvider(lmUrl) : this.providers.get('lmstudio')!;
         }
 
-        // dynamic instantiation if apiKey is provided and not empty
+        // ── Standard cloud providers (Google / OpenAI / DeepL) ─────────────────
+        // Override with user-provided API key if given
         const dynamicApiKey = options?.apiKey?.trim();
         if (dynamicApiKey) {
             if (name === 'google') return new GoogleProvider(dynamicApiKey);
@@ -59,13 +70,25 @@ export class TranslationService {
             if (name === 'deepl') return new DeepLProvider(dynamicApiKey);
         }
 
+        // ── GPT-OSS 120B (Cloudflare AI Gateway) ───────────────────────────────
+        // ONLY use user credentials when BOTH a custom URL and API Key are provided.
+        // Any partial input (only URL, only key, or neither) → use env-registered provider.
+        if (name === 'gptoss') {
+            const cfUrl = options?.customUrl?.trim();
+            const cfKey = options?.apiKey?.trim();
+            if (cfUrl && cfKey) {
+                console.log(`[CloudflareGateway] User override — URL: ${cfUrl}`);
+                return new CloudflareGatewayProvider(cfUrl, cfKey);
+            }
+            // Fall through to env-registered provider below
+        }
+
+        // ── Default: env-registered provider ───────────────────────────────────
         const provider = this.providers.get(name);
 
         if (!provider) {
-            // If requested provider is not configured (e.g. key missing), fall back to Mock?
-            // Or throw error? Let's throw error to notify user on frontend.
-            if (['openai', 'google', 'deepl'].includes(name) && !provider) {
-                throw new Error(`Provider '${name}' is not configured (Missing API Key).`);
+            if (['openai', 'google', 'deepl', 'gptoss'].includes(name)) {
+                throw new Error(`Provider '${name}' is not configured (Missing API Key or URL).`);
             }
             return this.providers.get('mock')!;
         }

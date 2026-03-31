@@ -70,7 +70,12 @@ const App: React.FC = () => {
   const isMultiLang = selectionMode === 'all' || (selectionMode === 'custom' && selectedLangs.size > 1);
   const [provider, setProvider] = useState<string>('google');
   const [lmStudioUrl, setLmStudioUrl] = useState<string>('http://localhost:1234/v1');
-  const [apiKey, setApiKey] = useState<string>('');
+  const [cfGatewayUrl, setCfGatewayUrl] = useState<string>(''); // Empty = use server .env default
+  const [apiKeys, setApiKeys] = useState<Record<string, string>>({});
+  const setApiKey = (val: string) => {
+    setApiKeys(prev => ({ ...prev, [provider]: val }));
+  };
+  const apiKey = apiKeys[provider] || '';
   const [context, setContext] = useState<string>('');
   const [batchSize, setBatchSize] = useState<number>(50);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -128,14 +133,14 @@ const App: React.FC = () => {
             const chunk = textsToTranslate.slice(i, i + chunkSize);
             console.log(`[Frontend] Processing chunk ${Math.ceil(i / chunkSize) + 1} (${chunk.length} items) for ${lang.code}`);
 
-            const chunkTranslated = await translateBatch(
-              chunk,
-              lang.code,
-              provider,
-              provider === 'lmstudio' ? lmStudioUrl : undefined,
-              context,
-              apiKey || undefined
-            );
+              const chunkTranslated = await translateBatch(
+                chunk,
+                lang.code,
+                provider,
+                provider === 'lmstudio' ? lmStudioUrl : provider === 'gptoss' && cfGatewayUrl.trim() ? cfGatewayUrl.trim() : undefined,
+                context,
+                apiKeys[provider] || undefined
+              );
 
             // Dịch xong chunk nào, xử lý và cập nhật ngay vào UI
             const chunkResults = entries.slice(i, i + chunkSize).map((entry, chunkIndex) => {
@@ -517,6 +522,8 @@ const App: React.FC = () => {
           setProvider={setProvider}
           lmStudioUrl={lmStudioUrl}
           setLmStudioUrl={setLmStudioUrl}
+          cfGatewayUrl={cfGatewayUrl}
+          setCfGatewayUrl={setCfGatewayUrl}
           apiKey={apiKey}
           setApiKey={setApiKey}
           batchSize={batchSize}

@@ -3,4 +3,4 @@ export interface TranslationProvider {
     translate(texts: string[], targetLang: string, context?: string): Promise<string[]>;
 }
 
-export type SupportedProvider = 'openai' | 'google' | 'deepl' | 'mock' | 'lmstudio' | 'longgilstudio';
+export type SupportedProvider = 'openai' | 'google' | 'deepl' | 'mock' | 'lmstudio' | 'longgilstudio' | 'gptoss';

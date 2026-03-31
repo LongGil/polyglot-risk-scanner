@@ -4,7 +4,7 @@ import axios from 'axios';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type SupportedProvider = 'openai' | 'google' | 'deepl' | 'mock' | 'lmstudio' | 'longgilstudio';
+type SupportedProvider = 'openai' | 'google' | 'deepl' | 'mock' | 'lmstudio' | 'longgilstudio' | 'gptoss';
 
 // ─── Mock Provider ────────────────────────────────────────────────────────────
 
@@ -296,6 +296,69 @@ async function translateLongGilStudio(
     }
 }
 
+// ─── Cloudflare Gateway (GPT-OSS) Provider ───────────────────────────────────
+
+async function translateGPTOSS(
+    texts: string[],
+    targetLang: string,
+    customUrl?: string,
+    context?: string,
+    userApiKey?: string
+): Promise<string[]> {
+    if (!texts.length) return [];
+
+    // Priority: customUrl (from UI) > CLOUDFLARE_GATEWAY_URL env var
+    const baseURL = customUrl?.trim() || process.env.CLOUDFLARE_GATEWAY_URL;
+    if (!baseURL) throw new Error("Provider 'gptoss' requires a Gateway URL. Please enter it in the Configuration panel or set 'CLOUDFLARE_GATEWAY_URL' in Vercel.");
+
+    const apiKey = userApiKey?.trim() || process.env.CLOUDFLARE_API_KEY;
+    if (!apiKey) throw new Error("Provider 'gptoss' requires an API Key. Please enter your Token in the Configuration panel or set 'CLOUDFLARE_API_KEY' in Vercel.");
+
+    const client = new OpenAI({ 
+        baseURL,
+        apiKey,
+        defaultHeaders: { 'cf-aig-token': apiKey },
+        timeout: 60000 
+    });
+
+    let prompt = `Translate the following texts to ${targetLang}. Return a valid JSON array of strings and NOTHING ELSE. Maintain the original order.`;
+    if (context && context.trim()) {
+        prompt += `\n\nContext: ${context}`;
+    }
+
+    try {
+        const response = await client.chat.completions.create({
+            model: "workers-ai/@cf/openai/gpt-oss-120b",
+            messages: [
+                { role: "system", content: "You are a helpful translator. Your output must be purely valid JSON object or array." },
+                { role: "user", content: `${prompt}\n\n${JSON.stringify(texts)}` }
+            ],
+        });
+
+        const content = response.choices[0].message.content;
+        if (!content) throw new Error("No content received from Cloudflare Gateway Provider");
+
+        // Robust JSON parsing
+        let cleanedContent = content.trim();
+        if (cleanedContent.startsWith('```json')) {
+            cleanedContent = cleanedContent.replace(/^```json/, '').replace(/```$/, '').trim();
+        } else if (cleanedContent.startsWith('```')) {
+            cleanedContent = cleanedContent.replace(/^```/, '').replace(/```$/, '').trim();
+        }
+
+        const parsed = JSON.parse(cleanedContent);
+
+        if (Array.isArray(parsed)) return parsed;
+        if (parsed.translations && Array.isArray(parsed.translations)) return parsed.translations;
+        return Object.values(parsed).flat() as string[];
+
+    } catch (error: any) {
+        console.error("[API] Cloudflare Gateway Error:", error.message);
+        const errorMessage = error.message || error.cause?.message || "Unknown Cloudflare Gateway error";
+        throw new Error(`GPT-OSS Error: ${errorMessage}`);
+    }
+}
+
 // ─── Handler ──────────────────────────────────────────────────────────────────
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -337,6 +400,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 break;
             case 'longgilstudio':
                 translated = await translateLongGilStudio(texts, targetLang, context);
+                break;
+            case 'gptoss':
+                translated = await translateGPTOSS(texts, targetLang, customUrl, context, userApiKey);
                 break;
             default:
                 return res.status(400).json({ error: `Unknown provider: ${selectedProvider}` });
