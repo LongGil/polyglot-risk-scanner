@@ -29,7 +29,7 @@ The core of the tool is a **multi-provider, multi-language translation pipeline*
 | **Google Gemini** | Cloud | Fast & cost-effective |
 | **DeepL** | Cloud | Excellent for European languages |
 | **LM Studio** | Local | Run Llama 3, Mistral, etc. — zero API cost |
-| **LongGil Studio** | Custom | Internal/on-premise endpoint |
+| **Long Gil Studio** | Custom | Internal/on-premise endpoint |
 | **Mock Provider** | Test | No API calls — great for UI development |
 
 ### Translation Modes
@@ -137,18 +137,6 @@ npm run dev
 ```
 
 Backend → `http://localhost:3001`
-
----
-
-## 🐳 Docker (Full Stack)
-
-```bash
-docker-compose up --build
-```
-
-App served at `http://localhost:3001` (Express static + API in one container).
-
----
 
 ## 📖 Usage Guide
 
